@@ -19,6 +19,82 @@
   const EMAILJS_PUBLIC_KEY  = '9ndYupvF-qnSqO990';
   emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 </script>
+
+<!-- ===== FIREBASE ===== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ======================================================
+  // PASTE YOUR FIREBASE CONFIG HERE (replace these values)
+  // ======================================================
+  const firebaseConfig = {
+    apiKey: "PASTE_YOUR_API_KEY_HERE",
+    authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
+    databaseURL: "PASTE_YOUR_DATABASE_URL_HERE",
+    projectId: "PASTE_YOUR_PROJECT_ID_HERE",
+    storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
+    messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
+    appId: "PASTE_YOUR_APP_ID_HERE"
+  };
+  // ======================================================
+
+  // Don't run Firebase if keys haven't been configured yet
+  if (firebaseConfig.apiKey === "PASTE_YOUR_API_KEY_HERE") {
+    console.log("Firebase not configured — using localStorage fallback.");
+  } else {
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ===== FIREBASE COMMENTS =====
+  const commentsRef = ref(db, 'comments');
+
+  window.fbSubmitComment = function() {
+    const name = document.getElementById('cm-name').value.trim();
+    const cat = document.getElementById('cm-category').value;
+    const body = document.getElementById('cm-body').value.trim();
+    const location = document.getElementById('cm-location').value.trim();
+    if (!name || !cat || !body) { showToast('Please fill in name, category, and comment.'); return; }
+    const comment = { name, cat, body, location, stars: window.currentCommentStar || 0, date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}), ts: Date.now() };
+    if (cat === 'delivery') { comment.species = document.getElementById('cm-species').value; comment.condition = document.getElementById('cm-condition').value; }
+    push(commentsRef, comment);
+    document.getElementById('cm-name').value=''; document.getElementById('cm-category').value=''; document.getElementById('cm-body').value=''; document.getElementById('cm-location').value='';
+    window.currentCommentStar = 0;
+    document.querySelectorAll('#cmStars span').forEach(s=>s.classList.remove('lit'));
+    toggleDeliveryFields();
+    showToast('Comment posted! 🐜');
+  };
+
+  onValue(commentsRef, (snapshot) => {
+    const data = snapshot.val();
+    window.comments = data ? Object.values(data).sort((a,b) => (b.ts||0)-(a.ts||0)) : [];
+    renderComments();
+    updateHomeRatingWidget();
+  });
+
+  // ===== FIREBASE REVIEWS =====
+  const reviewsRef = ref(db, 'reviews');
+
+  window.fbSubmitReview = function() {
+    const name = document.getElementById('rv-name').value.trim();
+    const product = document.getElementById('rv-product').value;
+    const title = document.getElementById('rv-title').value.trim();
+    const body = document.getElementById('rv-body').value.trim();
+    if (!name || !product || !title || !body || !window.currentReviewStar) { showToast('Please fill in all fields and select a star rating.'); return; }
+    push(reviewsRef, { name, product, title, body, stars: window.currentReviewStar, date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}), ts: Date.now() });
+    document.getElementById('rv-name').value=''; document.getElementById('rv-product').value=''; document.getElementById('rv-title').value=''; document.getElementById('rv-body').value='';
+    window.currentReviewStar = 0;
+    document.querySelectorAll('#rvStars span').forEach(s=>s.classList.remove('lit'));
+    showToast('Review submitted! Thank you 🐜');
+  };
+
+  onValue(reviewsRef, (snapshot) => {
+    const data = snapshot.val();
+    window.reviews = data ? Object.values(data).sort((a,b) => (b.ts||0)-(a.ts||0)) : [];
+    renderReviews();
+  });
+  } // end else (Firebase configured)
+</script>
 <style>
   :root {
     --soil:#1a0f00; --earth:#2d1a08; --clay:#4a2c0a; --gold:#f5a623;
@@ -31,7 +107,7 @@
   input,select,textarea,button{font-family:inherit;}
 
   /* CURSOR */
-  #cursor{position:fixed;width:18px;height:18px;border:2px solid var(--gold);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:transform .15s ease,border-color .15s;mix-blend-mode:difference;}
+  #cursor{position:fixed;width:18px;height:18px;border:2px solid var(--gold);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:transform .15s ease,border-color .15s;}
   #cursor.hover{transform:translate(-50%,-50%) scale(2.2);border-color:var(--amber);}
 
   /* FREE SHIPPING BANNER */
@@ -52,7 +128,7 @@
 
   /* HERO */
   .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8rem var(--pad) 5rem;position:relative;overflow:hidden;}
-  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(212,115,10,.12),transparent 70%);}
+  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(212,115,10,.12),transparent 70%);pointer-events:none;}
   .hero-label{font-size:.65rem;letter-spacing:.4em;text-transform:uppercase;color:var(--amber);margin-bottom:1.5rem;}
   .hero h1{font-family:"Playfair Display",serif;font-size:clamp(3rem,8vw,7rem);font-weight:900;line-height:1.05;margin-bottom:1.5rem;}
   .hero h1 em{font-style:italic;color:var(--gold);}
@@ -743,6 +819,7 @@
         <button class="filter-btn" onclick="filterComments('delivery',this)">Delivery Reports</button>
         <button class="filter-btn" onclick="filterComments('general',this)">General</button>
       </div>
+      <div id="totalCommentCount" style="font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:var(--amber);opacity:.6;margin:.8rem 0 1rem;"></div>
       <div id="noComments" style="text-align:center;padding:2rem;opacity:.35;font-size:.85rem;">No comments yet — start the conversation! 🐜</div>
       <div id="commentsList"></div>
     </div>
@@ -1210,22 +1287,25 @@ function payApple() { if(!validateCheckout()) return; showToast('Opening Apple P
 function payGoogle() { if(!validateCheckout()) return; showToast('Opening Google Pay...'); setTimeout(()=>{ cart=[]; updateCartUI(); showPage('success'); },1500); }
 
 // ===== REVIEWS =====
-let reviews = JSON.parse(localStorage.getItem('ae_reviews') || '[]');
+window.reviews = JSON.parse(localStorage.getItem('ae_reviews') || '[]');
 let currentReviewStar = 0;
+window.currentReviewStar = 0;
 function setReviewStar(n) {
-  currentReviewStar = n;
+  currentReviewStar = n; window.currentReviewStar = n;
   document.querySelectorAll('#rvStars span').forEach((s,i) => s.classList.toggle('lit', i < n));
 }
 function submitReview() {
+  if(window.fbSubmitReview) { window.fbSubmitReview(); return; }
+  // fallback to localStorage
   const name = document.getElementById('rv-name').value.trim();
   const product = document.getElementById('rv-product').value;
   const title = document.getElementById('rv-title').value.trim();
   const body = document.getElementById('rv-body').value.trim();
   if (!name || !product || !title || !body || !currentReviewStar) { showToast('Please fill in all fields and select a star rating.'); return; }
-  reviews.unshift({ name, product, title, body, stars: currentReviewStar, date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}) });
-  localStorage.setItem('ae_reviews', JSON.stringify(reviews));
+  window.reviews.unshift({ name, product, title, body, stars: currentReviewStar, date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}), ts: Date.now() });
+  localStorage.setItem('ae_reviews', JSON.stringify(window.reviews));
   renderReviews();
-  document.getElementById('rv-name').value=''; document.getElementById('rv-product').value=''; document.getElementById('rv-title').value=''; document.getElementById('rv-body').value=''; currentReviewStar=0;
+  document.getElementById('rv-name').value=''; document.getElementById('rv-product').value=''; document.getElementById('rv-title').value=''; document.getElementById('rv-body').value=''; currentReviewStar=0; window.currentReviewStar=0;
   document.querySelectorAll('#rvStars span').forEach(s=>s.classList.remove('lit'));
   showToast('Review submitted! Thank you 🐜');
 }
@@ -1233,6 +1313,7 @@ function renderReviews() {
   const list = document.getElementById('reviewsList');
   const noR = document.getElementById('noReviews');
   if (!list) return;
+  const reviews = window.reviews || [];
   if (reviews.length === 0) { if(noR) noR.style.display='block'; list.innerHTML=''; return; }
   if(noR) noR.style.display='none';
   const avg = reviews.reduce((s,r)=>s+r.stars,0)/reviews.length;
@@ -1251,11 +1332,12 @@ function renderReviews() {
 renderReviews();
 
 // ===== COMMENTS =====
-let comments = JSON.parse(localStorage.getItem('ae_comments') || '[]');
+window.comments = JSON.parse(localStorage.getItem('ae_comments') || '[]');
 let currentCommentStar = 0;
+window.currentCommentStar = 0;
 let currentFilter = 'all';
 function setCommentStars(n) {
-  currentCommentStar = n;
+  currentCommentStar = n; window.currentCommentStar = n;
   document.querySelectorAll('#cmStars span').forEach((s,i) => s.classList.toggle('lit', i < n));
 }
 function toggleDeliveryFields() {
@@ -1264,19 +1346,22 @@ function toggleDeliveryFields() {
   if(fields) fields.style.display = cat === 'delivery' ? 'block' : 'none';
 }
 function submitComment() {
+  if(window.fbSubmitComment) { window.fbSubmitComment(); return; }
+  // fallback to localStorage
   const name = document.getElementById('cm-name').value.trim();
   const cat = document.getElementById('cm-category').value;
   const body = document.getElementById('cm-body').value.trim();
   const location = document.getElementById('cm-location').value.trim();
   if (!name || !cat || !body) { showToast('Please fill in name, category, and comment.'); return; }
-  const comment = { name, cat, body, location, stars: currentCommentStar, date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}) };
+  const comment = { name, cat, body, location, stars: currentCommentStar, date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}), ts: Date.now() };
   if (cat === 'delivery') { comment.species = document.getElementById('cm-species').value; comment.condition = document.getElementById('cm-condition').value; }
-  comments.unshift(comment);
-  localStorage.setItem('ae_comments', JSON.stringify(comments));
+  window.comments.unshift(comment);
+  localStorage.setItem('ae_comments', JSON.stringify(window.comments));
   renderComments();
   updateHomeRatingWidget();
-  document.getElementById('cm-name').value=''; document.getElementById('cm-category').value=''; document.getElementById('cm-body').value=''; document.getElementById('cm-location').value=''; currentCommentStar=0;
+  document.getElementById('cm-name').value=''; document.getElementById('cm-category').value=''; document.getElementById('cm-body').value=''; document.getElementById('cm-location').value=''; currentCommentStar=0; window.currentCommentStar=0;
   document.querySelectorAll('#cmStars span').forEach(s=>s.classList.remove('lit'));
+  toggleDeliveryFields();
   showToast('Comment posted! 🐜');
 }
 function filterComments(cat, btn) {
@@ -1289,7 +1374,11 @@ function renderComments() {
   const list = document.getElementById('commentsList');
   const noC = document.getElementById('noComments');
   if (!list) return;
+  const comments = window.comments || [];
   const filtered = currentFilter === 'all' ? comments : comments.filter(c => c.cat === currentFilter);
+  // Update total comment count
+  const totalCountEl = document.getElementById('totalCommentCount');
+  if(totalCountEl) totalCountEl.textContent = comments.length + ' comment' + (comments.length!==1?'s':'') + ' total';
   if (filtered.length === 0) { if(noC) noC.style.display='block'; list.innerHTML=''; return; }
   if(noC) noC.style.display='none';
   const siteRatings = comments.filter(c => c.stars > 0);
@@ -1312,6 +1401,7 @@ function renderComments() {
 renderComments();
 
 function updateHomeRatingWidget() {
+  const comments = window.comments || [];
   const rated = comments.filter(c => c.stars > 0);
   const avgEl = document.getElementById('homeSiteRating');
   const starsEl = document.getElementById('homeSiteStars');
@@ -1512,7 +1602,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   document.addEventListener('selectstart', e => e.preventDefault());
   document.addEventListener('dragstart', e => e.preventDefault());
-  setTimeout(() => { console.clear(); console.log('%c🔒 AntEmpire','color:#f5a623;font-size:2rem;font-weight:bold'); console.log('%cThis site is protected.','color:#d4730a'); }, 100);
+  setTimeout(() => { try{console.clear();}catch(e){} console.log('%c🔒 AntEmpire','color:#f5a623;font-size:2rem;font-weight:bold'); console.log('%cThis site is protected.','color:#d4730a'); }, 100);
 
   // Modal backdrop clicks
   const pm = document.getElementById('productModal'); if(pm) pm.addEventListener('click', e => { if(e.target===pm) closeModal(); });
@@ -1543,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const cursor = document.getElementById('cursor');
   if(cursor) {
     document.addEventListener('mousemove', e => { cursor.style.left=e.clientX+'px'; cursor.style.top=e.clientY+'px'; });
-    document.querySelectAll('a,button,.product-card,.drop-zone,.gallery-item').forEach(el => {
+    document.querySelectorAll('a,button,.product-card,.drop-zone,.gallery-item').forEach(el => {
       el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
       el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
     });
