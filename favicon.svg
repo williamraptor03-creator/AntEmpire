@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="12" fill="#1a0f00"/>
+  
+  <!-- Ant body - abdomen -->
+  <ellipse cx="32" cy="46" rx="10" ry="13" fill="#f5a623"/>
+  
+  <!-- Ant body - thorax -->
+  <ellipse cx="32" cy="30" rx="7" ry="8" fill="#f5a623"/>
+  
+  <!-- Ant body - head -->
+  <ellipse cx="32" cy="18" rx="8" ry="7" fill="#f5a623"/>
+
+  <!-- Antennae -->
+  <line x1="28" y1="13" x2="18" y2="5" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="18" cy="5" r="2" fill="#d4730a"/>
+  <line x1="36" y1="13" x2="46" y2="5" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="46" cy="5" r="2" fill="#d4730a"/>
+
+  <!-- Eyes -->
+  <circle cx="28" cy="17" r="2" fill="#1a0f00"/>
+  <circle cx="36" cy="17" r="2" fill="#1a0f00"/>
+
+  <!-- Legs left -->
+  <line x1="25" y1="28" x2="10" y2="22" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="25" y1="32" x2="8" y2="32" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="25" y1="36" x2="10" y2="42" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Legs right -->
+  <line x1="39" y1="28" x2="54" y2="22" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="39" y1="32" x2="56" y2="32" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="39" y1="36" x2="54" y2="42" stroke="#d4730a" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Abdomen shine -->
+  <ellipse cx="30" cy="42" rx="4" ry="6" fill="rgba(255,255,255,0.08)"/>
+</svg>
